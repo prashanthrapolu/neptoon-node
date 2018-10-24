@@ -69,12 +69,13 @@ router.get('/room/:name', function (req, res) {
   else {
  
     opentok.createSession({ mediaMode: 'routed' }, function (err, session) {
+      sessionId = session.sessionId;
       if (err) {
         console.log(err);
         res.status(500).send({ error: 'createSession error:' + err });
         return;
       }
-      sessionId = session.sessionId;
+      
       // now that the room name has a session associated wit it, store it in memory
       // IMPORTANT: Because this is stored in memory, restarting your server will reset these values
       // if you want to store a room-to-session association in your production application
