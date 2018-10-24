@@ -11,7 +11,7 @@ if (!apiKey || !secret) {
   console.error('');
   console.error('Missing TOKBOX_API_KEY or TOKBOX_SECRET');
   console.error('Find the appropriate values for these by logging into your TokBox Dashboard at: https://tokbox.com/account/#/');
-  console.error('Then add them to ', path.resolve('.env'), 'or as environment variables' );
+  console.error('Then add them to ', path.resolve('.env'), 'or as environment variables');
   console.error('');
   console.error('=========================================================================================================');
   process.exit();
@@ -32,68 +32,40 @@ function findRoomFromSessionId(sessionId) {
   return _.findKey(roomToSessionIdDictionary, function (value) { return value === sessionId; });
 }
 
-router.get('/', function (req, res) {
-  res.render('index', { title: 'Learning-OpenTok-Node' });
-});
+// router.get('/', function (req, res) {
+//   res.render('index', { title: 'Learning-OpenTok-Node' });
+// });
 
 /**
  * GET /session redirects to /room/session
  */
-router.get('/session', function (req, res) {
-  res.redirect('/room/session');
-});
+// router.get('/session', function (req, res) {
+//   res.redirect('/room/session');
+// });
 
 /**
  * GET /room/:name
  */
-router.get('/room/:name', function (req, res) {
-  var roomName = req.params.name;
-  var sessionId;
+
+router.get('/session', function (req, res) {
   var token;
-  console.log('attempting to create a session associated with the room: ' + roomName);
-
-  // if the room name is associated with a session ID, fetch that
-  if (roomToSessionIdDictionary[roomName]) {
-    sessionId = roomToSessionIdDictionary[roomName];
-
-    // generate token
-    token = opentok.generateToken(sessionId);
-    res.setHeader('Content-Type', 'application/json');
-    res.send({
-      apiKey: apiKey,
-      sessionId: sessionId,
-      token: token
-    });
-  }
-  // if this is the first time the room is being accessed, create a new session ID
-  else {
- 
-    opentok.createSession({ mediaMode: 'routed' }, function (err, session) {
+  opentok.createSession({mediaMode:"routed"}, function(error, session) {
+    if (error) {
+      console.log("Error creating session:", error)
+    } else {
       sessionId = session.sessionId;
-      if (err) {
-        console.log(err);
-        res.status(500).send({ error: 'createSession error:' + err });
-        return;
-      }
-      
-      // now that the room name has a session associated wit it, store it in memory
-      // IMPORTANT: Because this is stored in memory, restarting your server will reset these values
-      // if you want to store a room-to-session association in your production application
-      // you should use a more persistent storage for them
-      roomToSessionIdDictionary[roomName] = session.sessionId;
-
-      // generate token
+      console.log("Session ID: " + sessionId);
       token = opentok.generateToken(session.sessionId);
-      res.setHeader('Content-Type', 'application/json');
-      res.send({
+    }
+    res.setHeader('Content-Type', 'application/json');
+      
+    res.send({
         apiKey: apiKey,
         sessionId: session.sessionId,
         token: token
       });
-    });
-  }
-});
-
+  });
+})
 /**
  * POST /archive/start
  */
@@ -200,6 +172,52 @@ router.get('/archive', function (req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.send(archives);
   });
+});
+
+router.get('/room/:name', function (req, res) {
+  var roomName = req.params.name;
+  var sessionId;
+  var token;
+  console.log('attempting to create a session associated with the room: ' + roomName);
+
+  // if the room name is associated with a session ID, fetch that
+  if (roomToSessionIdDictionary[roomName]) {
+    sessionId = roomToSessionIdDictionary[roomName];
+
+    // generate token
+    token = opentok.generateToken(sessionId);
+    res.setHeader('Content-Type', 'application/json');
+    res.send({
+      apiKey: apiKey,
+      sessionId: sessionId,
+      token: token
+    });
+  }
+  // if this is the first time the room is being accessed, create a new session ID
+  else {
+    opentok.createSession({ mediaMode: 'routed' }, function (err, session) {
+      if (err) {
+        console.log(err);
+        res.status(500).send({ error: 'createSession error:' + err });
+        return;
+      }
+
+      // now that the room name has a session associated wit it, store it in memory
+      // IMPORTANT: Because this is stored in memory, restarting your server will reset these values
+      // if you want to store a room-to-session association in your production application
+      // you should use a more persistent storage for them
+      roomToSessionIdDictionary[roomName] = session.sessionId;
+
+      // generate token
+      token = opentok.generateToken(session.sessionId);
+      res.setHeader('Content-Type', 'application/json');
+      res.send({
+        apiKey: apiKey,
+        sessionId: session.sessionId,
+        token: token
+      });
+    });
+  }
 });
 
 module.exports = router;
